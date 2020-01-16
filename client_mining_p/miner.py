@@ -1,9 +1,9 @@
 import hashlib
 import requests
-from time import time
 
 import sys
 import json
+import time
 
 
 def proof_of_work(block):
@@ -18,8 +18,6 @@ def proof_of_work(block):
     proof = 0
     while valid_proof(block_string, proof) is False:
         proof += 1
-
-    # TODO: Return proof
     return proof
 
 
@@ -34,10 +32,9 @@ def valid_proof(block_string, proof):
     correct number of leading zeroes.
     :return: True if the resulting hash is a valid proof, False otherwise
     """
-    guess = f'{block_string}{proof}'.encode()
+    guess = f"{block_string}{proof}".encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
 
-    # TODO: Return True or False
     return guess_hash[:6] == '000000'
 
 
@@ -54,48 +51,56 @@ if __name__ == '__main__':
     print("ID is", id)
     f.close()
 
-    # Instantiate coin counter
-    coins_mined = 0
-
     # Run forever until interrupted
+    coins = 0
     while True:
-        # set up timer
-        start_time = time()
-
         r = requests.get(url=node + "/last_block")
+        start_time = time.time()
         # Handle non-json response
+        # print(r.json())
         try:
             data = r.json()
-        except ValueError:
+        except:
             print("Error:  Non-json response")
             print("Response returned:")
             print(r)
-            break
-
+            continue
         # TODO: Get the block from `data` and use it to look for a new proof
-        new_proof = proof_of_work(data.get('last_block'))
+        new_proof = proof_of_work(data['last_block'])
 
         # When found, POST it to the server {"proof": new_proof, "id": id}
         post_data = {"proof": new_proof, "id": id}
 
-        r = requests.post(url=node + "/mine", json=post_data)
-
-        # https://requests.readthedocs.io/en/master/user/quickstart/#json-response-content
-        # https://stackoverflow.com/a/32330629
-        if r.json() is not ValueError:
-            data = r.json()
-        else:
-            print('Server sent something unexpected. Exiting application now...')
-            break
+        r2 = requests.post(url=node + "/mine", json=post_data)
+        # print(r2.json())
+        try:
+            new_data = r2.json()
+            if new_data['message'] == 'New Block Forged':
+                end_time = time.time()
+                coins += 1
+                print(f"{end_time - start_time} seconds")
+                print(f'You now have {coins} coins!')
+            else:
+                end_time = time.time()
+                print(f"{end_time - start_time} seconds")
+                print(new_data['message'])
+        except:
+            print("Error:  Non-json response")
+            print("Response returned:")
+            print(r)
+            continue
 
         # TODO: If the server responds with a 'message' 'New Block Forged'
+        # if new_data['message'] == 'New Block Forged':
+        #     end_time = time.time()
+        #     coins += 1
+        #     print(f"{end_time - start_time} seconds")
+        #     print(f'You now have {coins} coins!')
+        # else:
+        #     end_time = time.time()
+        #     print(f"{end_time - start_time} seconds")
+        #     print(new_data['message'])
+
         # add 1 to the number of coins mined and print it.  Otherwise,
         # print the message from the server.
-        if data.get('message') == 'New Block Forged':
-            coins_mined += 1
-            end_time = time()
-            time_took = end_time - start_time
-            print(f'Time taken to mine: {time_took} seconds')
-            print(f'Coins mined so far: {coins_mined}')
-        else:
-            print(data.message)
+        # return

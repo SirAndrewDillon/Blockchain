@@ -143,7 +143,7 @@ def mine():
         response = {
             'message': 'New Block Forged'
         }
-        return jsonify(response), 200
+        return jsonify(response), 201
     else:
         response = {
             'message': 'Invalid proof'
